@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""This Programm encrypts or decrypts a message given a cretain key."""
+import tkinter as tk
+from math import sqrt
+from math import ceil
+
+
+def create_key_matrix(key: str):
+    """Create a matrix from a key."""
+    len_key = int(ceil(sqrt(len(key))))
+    key_matrix = [[0 for j in range(len_key)] for i in range(len_key)]
+    count = 0
+    for i in range(len_key):
+        for j in range(len_key):
+            try:
+                key_matrix[i][j] = ord(key[count])
+                count += 1
+            except IndexError:
+                key_matrix[i][j] = 0
+    return key_matrix
+
+
+def create_msg_matrix1(msg: str, row: int, column: int) -> list:
+    """Create a matrix from message for encryption."""
+    msg_matrix = [[0 for j in range(column)] for i in range(row)]
+    count = 0
+    for i in range(row):
+        for j in range(column):
+            try:
+                msg_matrix[i][j] = ord(msg[count])
+                count += 1
+            except IndexError:
+                msg_matrix[i][j] = 0
+    return msg_matrix
+
+
+def create_msg_matrix2(msg: str, row: int, column: int) -> list:
+    """Create a matrix from message for decryption."""
+    msg_matrix = [[0 for j in range(column)] for i in range(row)]
+    msg_split = msg.split()
+    count = 0
+    for i in range(row):
+        for j in range(column):
+            try:
+                msg_matrix[i][j] = int(msg_split[count])
+                count += 1
+            except IndexError:
+                msg_matrix[i][j] = 0
+    return msg_matrix
+
+
+def invert_matrix(matrix: list) -> list:
+    """Invert a matrix."""
+    length = len(matrix)
+    identity = [[1 if i == j else 0 for j in range(length)] for i in range(length)]
+    augmented_matrix = [matrix[i] + identity[i] for i in range(length)]
+    for i in range(length):
+        pivot = augmented_matrix[i][i]
+        if (pivot == 0):
+            return None
+        for o in range(2 * length):
+            augmented_matrix[i][o] /= pivot
+        for j in range(length):
+            if (j != i):
+                factor = augmented_matrix[j][i]
+                for k in range(2 * length):
+                    augmented_matrix[j][k] -= factor * augmented_matrix[i][k]
+    inverse_matrix = [row[length:] for row in augmented_matrix]
+    return inverse_matrix
+
+
+def multiply_matrix(msg_row: int, len_key: int, msg_matrix: list, key_matrix: list) -> list:
+    """Multiply two matrices together."""
+    final_matrix = [[0 for j in range(len_key)] for i in range(msg_row)]
+    for i in range(msg_row):
+        for j in range(len_key):
+            for k in range(len_key):
+                final_matrix[i][j] += (msg_matrix[i][k] * key_matrix[k][j])
+    return final_matrix
+
+
+class MyGUI:
+    """Represent the entire window."""
+
+    def __init__(self):
+        """Initialize all variables and execute their associated functions."""
+        self.win = tk.Tk()
+        self.win.geometry("800x600")
+        self.win.title("Encryption password")
+        self.win.resizable(False, False)
+        self.frame = tk.Frame(self.win)
+        self.msg_matrix = [[20, 34, 15], [65, 73, 49], [50, 81, 94]]
+        self.msg_instruction = tk.Label(self.frame, text="Enter your message below", font=('Arial', 15))
+        self.msg_entry = tk.Entry(self.frame, font=('Arial', 15))
+        self.key_matrix = [[1, 2], [3, 4]]
+        self.key_instruction = tk.Label(self.frame, text="Enter your key below", font=('Arial', 15))
+        self.key_entry = tk.Entry(self.frame, font=('Arial', 15))
+        self.encrypt_button = tk.Button(self.frame, text="Encrypt", font=('Arial', 15), command=self.encrypt)
+        self.decrypt_button = tk.Button(self.frame, text="Decrypt", font=('Arial', 15), command=self.decrypt)
+        self.display_all()
+        self.win.mainloop()
+
+    def display_all(self):
+        """Display the elements of the window."""
+        self.frame.pack(side="top", expand=True, fill="both")
+        self.msg_instruction.pack(padx=5, pady=5)
+        self.msg_entry.pack(padx=5, pady=5)
+        self.key_instruction.pack(padx=5, pady=5)
+        self.key_entry.pack(padx=5, pady=5)
+        self.encrypt_button.pack(padx=5, pady=5)
+        self.decrypt_button.pack(padx=5, pady=5)
+
+    def encrypt(self):
+        """Encrypt the message with the given key."""
+        self.frame.pack(side="top", expand=True, fill="both")
+        key = self.key_entry.get()
+        message = self.msg_entry.get()
+        error = 0
+        quote1 = "            Key Matrix:            "
+        quote2 = "            Encrypted Matrix:            "
+        if (len(message) == 0):
+            quote2 = "            Please insert a message            "
+            error = 1
+        if (len(key) == 0):
+            quote1 = "            Please insert a key            "
+            error = 1
+        key_quote = tk.Label(self.frame, text=quote1, font=('Arial', 15))
+        msg_quote = tk.Label(self.frame, text=quote2, font=('Arial', 15))
+        key_quote.place(x=self.win.winfo_width() / 2, y=300, anchor="center")
+        msg_quote.place(x=self.win.winfo_width() / 2, y=450, anchor="center")
+        if (error == 1):
+            return
+        key_len = int(ceil(sqrt(len(key))))
+        msg_len = len(message)
+        msg_row = (int(msg_len / key_len )if msg_len % key_len == 0 else int(msg_len / key_len + 1))
+        msg_column = key_len
+        self.key_matrix = create_key_matrix(key)
+        self.msg_matrix = create_msg_matrix1(message, msg_row, msg_column)
+        self.msg_matrix = multiply_matrix(msg_row, key_len, self.msg_matrix, self.key_matrix)
+        msg_str = ""
+        for i in range(len(self.msg_matrix)):
+            for j in range(len(self.msg_matrix[i])):
+                msg_str += str(self.msg_matrix[i][j])
+                msg_str += " "
+        self.show_result1(msg_str)
+
+    def decrypt(self):
+        """Decrypt the message with the given key."""
+        self.frame.pack(side="top", expand=True, fill="both")
+        key = self.key_entry.get()
+        message = self.msg_entry.get()
+        error = 0
+        quote1 = "            Key Matrix:            "
+        quote2 = "Encrypted Matrix:"
+        if (len(message) == 0):
+            quote2 = "            Please insert a message            "
+            error = 1
+        if (len(key) == 0):
+            quote1 = "            Please insert a key            "
+            error = 1
+        if (invert_matrix(self.key_matrix) is None):
+            quote1 = "The key in not inversible"
+            error = 1
+        key_quote = tk.Label(self.frame, text=quote1, font=('Arial', 15))
+        msg_quote = tk.Label(self.frame, text=quote2, font=('Arial', 15))
+        key_quote.place(x=self.win.winfo_width() / 2, y=300, anchor="center")
+        msg_quote.place(x=self.win.winfo_width() / 2, y=450, anchor="center")
+        if (error == 1):
+            return
+        key_len = int(ceil(sqrt(len(key))))
+        msg_len = message.count(" ") + 1
+        msg_row = (int(msg_len / key_len) if msg_len % key_len == 0 else int(msg_len / key_len + 1))
+        msg_column = key_len
+        self.key_matrix = create_key_matrix(key)
+        self.key_matrix = invert_matrix(self.key_matrix)
+        self.msg_matrix = create_msg_matrix2(message, msg_row, msg_column)
+        self.msg_matrix = multiply_matrix(msg_row, key_len, self.msg_matrix, self.key_matrix)
+        self.show_result2()
+
+    def show_result1(self, msg_str: str):
+        """Show the result of the encryption."""
+        rounded_key_matrix = [[0.0 if round(x, 3) == 0 else round(x, 3) for x in self.key_matrix[i]] for i in range(len(self.key_matrix))]
+        self.key_result = tk.Label(self.frame, text=rounded_key_matrix, font=('Arial', 15), wraplength=self.win.winfo_width() - 20, width=10000, background="light grey")
+        self.msg_result = tk.Label(self.frame, text=msg_str, font=('Arial', 15), wraplength=self.win.winfo_width() - 20, width=10000, background="light grey")
+        self.key_result.config(text=f"{rounded_key_matrix}")
+        self.msg_result.config(text=f"{msg_str}")
+        self.key_result.place(x=(self.win.winfo_width() / 2), y=350, anchor="center")
+        self.msg_result.place(x=(self.win.winfo_width() / 2), y=500, anchor="center")
+
+    def show_result2(self):
+        """Show the result of the decryption."""
+        rounded_key_matrix = [[0.0 if round(x, 3) == 0 else round(x, 3) for x in self.key_matrix[i]] for i in range(len(self.key_matrix))]
+        msg_matrix = [[chr(round(self.msg_matrix[i][j])) for j in range(len(self.msg_matrix[i]))] for i in range(len(self.msg_matrix))]
+        msg_str = ''
+        for i in range(len(self.msg_matrix)):
+            for j in range(len(self.msg_matrix[i])):
+                msg_str += msg_matrix[i][j]
+        self.key_result = tk.Label(self.frame, text=rounded_key_matrix, font=('Arial', 15), wraplength=self.win.winfo_width() - 20, width=10000, background="light grey")
+        self.msg_result = tk.Label(self.frame, text=msg_str, font=('Arial', 15), wraplength=self.win.winfo_width() - 20, width=10000, background="light grey")
+        self.key_result.config(text=f"{rounded_key_matrix}")
+        self.msg_result.config(text=f"{msg_str}")
+        self.key_result.place(x=(self.win.winfo_width() / 2), y=350, anchor="center")
+        self.msg_result.place(x=(self.win.winfo_width() / 2), y=500, anchor="center")
+
+
+if __name__ != "103cipher.py":
+    MyGUI()
